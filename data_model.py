@@ -52,7 +52,7 @@ class Graph:
     def has_connection(self, first_zone: Zone, second_zone: Zone) -> bool:
         for con in self.connections:
             if (
-                con.zone_a is first_zone and con.zone_b is second_zone
+                con.zone_a is first_zone and con.zone_b is second_zone 
             ) or (
                 con.zone_b is first_zone and con.zone_a is second_zone
             ):
