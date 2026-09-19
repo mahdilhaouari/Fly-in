@@ -38,6 +38,10 @@ class Connection:
         self.zone_a = zone_a
         self.zone_b = zone_b
 
+    @property
+    def name(self) -> str:
+        return f"{self.zone_a.name}-{self.zone_b.name}"
+    
     def other_side(self, zone: Zone) -> Zone:
         return self.zone_b if zone is self.zone_a else self.zone_a
 
@@ -90,6 +94,26 @@ class Graph:
     def end_validate(self) -> None:
         if self.end is None:
             raise ParseError("no end hub found")
+
+
+class Drone:
+    def __init__(self, drone_id: int, start: Zone) -> None:
+        self.id = drone_id
+        self.zone: Zone | None = start
+        self.transit: Connection | None = None
+        self.turns_left = 0
+        self.path: list[Zone] = []
+        self.step = 0
+
+
+class Movement:
+    def __init__(self, drone: Drone, target: Zone | Connection) -> None:
+        self.drone = drone
+        self.target = target
+
+    @property
+    def name(self) -> str:
+        return f"{self.zone_a.name}-{self.zone_b.name}"
 
 
 if __name__ == "__main__":

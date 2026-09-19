@@ -1,3 +1,17 @@
 -->  adjacency list
 -->  a* search algorithm
 -->  pyparsing 
+
+
+
+##### to check / to do #######
+ -->  when we print samething with a valid metadata it ignore but should be a messege with "invalid metadata" 
+
+
+ A drone carries its own route. That works, but ask yourself: is a route something a drone has, or something the scheduler assigns and tracks?
+
+Argument for keeping it on the drone: the scheduler asks drone.path[drone.step + 1] and it's all in one place.
+
+Argument against: a drone is a thing that exists in the world; a plan is something imposed on it. If the scheduler held dict[Drone, list[Zone]], then re-planning mid-run wouldn't mean mutating drones.
+
+For this project I'd keep it on the drone — simpler, and re-planning mid-run is unlikely. But be able to say why, because it's exactly the kind of design question a peer evaluator asks.
