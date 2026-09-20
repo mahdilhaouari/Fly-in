@@ -14,6 +14,7 @@ drones_line = re.compile(r"nb_drones:\s+(-?\d+)")
 
 meta_pair = re.compile(r"(\w+)=(\S+)")
 
+meta_block = re.compile(r"(\w+)=([^\s=]+)(\s+(\w+)=([^\s=]+))*")
 
 class Parser:
     def __init__(self, path: str) -> None:
@@ -86,7 +87,9 @@ class Parser:
             
     def parse_metadata(self, raw: str | None) -> dict[str, str]:
 
-        raw = raw or "" # because raw can be none idan findall radi dkraxi 
+        raw = raw or "" # because raw can be none idan findall radi dkraxi
+        if raw and meta_block.fullmatch(raw) is None:
+            raise ParseError(f"line {self.line_number}: invalid metadata block")
         pairs = meta_pair.findall(raw)
         dic: dict[str, str] = {}
         for key, value in pairs:
