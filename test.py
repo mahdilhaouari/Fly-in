@@ -19,16 +19,40 @@
 
             # a = OrderedDict()
 
-from enum import Enum
-
-class ZoneType(Enum):
-    NORMAL = "normal"
-    BLOCKED = "blocked"
-    RESTRICTED = "restricted"
-    PRIORITY = "priority"
 
 
-a = "nosrmal"
 
-if a in ZoneType:
-    print("it is there")
+
+# 
+            # from enum import Enum
+
+            # class ZoneType(Enum):
+            #     NORMAL = "normal"
+            #     BLOCKED = "blocked"
+            #     RESTRICTED = "restricted"
+            #     PRIORITY = "priority"
+
+
+            # a = "nosrmal"
+
+            # if a in ZoneType:
+            #     print("it is there")
+
+
+
+
+# import webcolors
+
+# ss = webcolors.name_to_rgb("black")
+
+# print(int("34343_____2"))
+
+
+
+import heapq
+b = "frf"
+a = [[2, 4, 5, 6],[7],[3]]
+z = heapq.heappop(a)
+print(hash(b))
+print(a)
+

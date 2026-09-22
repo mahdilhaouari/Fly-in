@@ -30,6 +30,19 @@ class Zone:
         self.y = y
         self.connections: list[Connection] = []
 
+    @property
+    def cost(self) -> int:
+        if self.zone_type == ZoneType.NORMAL or self.zone_type == ZoneType.PRIORITY:
+            return 1
+        elif self.zone_type == ZoneType.RESTRICTED:
+            return 2
+        else:
+            raise ValueError(f"blocked zone {self.name} has no cost")       
+
+    @property
+    def is_enterable(self) -> bool:
+        return True if self.zone_type is not ZoneType.BLOCKED else False # or we can usee return self.zone_type is not ZoneType.BLOCKED without if else
+
 
 class Connection:
     def __init__(self, zone_a: Zone, zone_b: Zone,
