@@ -6,6 +6,10 @@ class ParseError(Exception):
     pass
 
 
+class NoPathError(Exception):
+    pass
+
+
 class ZoneType(Enum):
     NORMAL = "normal"
     BLOCKED = "blocked"
@@ -124,23 +128,3 @@ class Movement:
         self.drone = drone
         self.target = target
 
-    @property
-    def name(self) -> str:
-        return f"{self.zone_a.name}-{self.zone_b.name}"
-
-
-if __name__ == "__main__":
-    zone1 = Zone("zone1", "red", 3, ZoneType.RESTRICTED, 3, 3)
-    zone3 = Zone("zone1", "red", 3, ZoneType.RESTRICTED, 3, 3)
-    zone2 = Zone("zone1", "red", 3, ZoneType.RESTRICTED, 3, 3)
-    graph = Graph(
-    zones={
-        zone1.name: zone1,
-        zone2.name: zone2,
-    },
-    connections=[],
-    start=zone1,
-    end=zone2,
-)
-    graph.add_connection(zone1, zone2, 2)
-    print(graph.has_connection(zone1, zone3))

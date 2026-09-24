@@ -1,10 +1,11 @@
 from data_model import Zone, ZoneType, Drone, Movement, Connection
 
+
 class Renderer:
     def render_turn(self, movements: list[Movement]) -> str:
         return " ".join(
-            f"D{m.drone.id}-{m.target.name}" for m in movements
-    )
+            f"D{m.drone.id}-{m.target.name}" for m in movements)
+
 
 if __name__ == "__main__":
     start = Zone("start", None, 1, ZoneType.NORMAL, 0, 0)

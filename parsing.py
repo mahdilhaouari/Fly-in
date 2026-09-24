@@ -16,6 +16,7 @@ meta_pair = re.compile(r"(\w+)=(\S+)")
 
 meta_block = re.compile(r"(\w+)=([^\s=]+)(\s+(\w+)=([^\s=]+))*")
 
+
 class Parser:
     def __init__(self, path: str) -> None:
         self.path = path
@@ -45,51 +46,55 @@ class Parser:
         return nbr
 
     def parse(self) -> tuple[Graph, int]:
-            try:
-                with open(self.path) as f:
-                    lines = f.readlines()
-            except FileNotFoundError as e:
-                raise ParseError("this file doesnt exist") from e
+        try:
+            with open(self.path) as f:
+                lines = f.readlines()
+        except FileNotFoundError as e:
+            raise ParseError("this file doesnt exist") from e
 
-            for number_of_line, line in enumerate(lines, start=1):
-                self.line_number = number_of_line
-                check = self.clean_line(line)
-                if check == "":
-                    continue
-                if self.nb_drones is None:
-                    self.nb_drones = self.parse_drones_line(check)
-                    continue
-                if check.startswith("connection:"):
-                    name_a, name_b, capacity = self.parse_connection_line(check)
-                    if name_a not in self.graph.zones:
-                        raise ParseError(f"line {self.line_number}: unknown zone {name_a}")
-                    if name_b not in self.graph.zones:
-                        raise ParseError(f"line {self.line_number}: unknown zone {name_b}")
-                    zone_a = self.graph.zones[name_a]
-                    zone_b = self.graph.zones[name_b]
-                    try:
-                        self.graph.add_connection(zone_a, zone_b, capacity)
-                    except ParseError as e:
-                        raise ParseError(f"line {self.line_number}: {e}") from e
-                elif check.startswith(("hub:", "start_hub:", "end_hub:")):
-                    zone, kind = self.parse_zone_line(check)
-                    try:
-                        self.graph.add_zone(zone, kind)
-                    except ParseError as e:
-                        raise ParseError(f"line {self.line_number}: {e}") from e
-                else:
-                    raise ParseError(f"line {self.line_number}: unknown line type")
-            self.graph.start_validate()
-            self.graph.end_validate()
+        for number_of_line, line in enumerate(lines, start=1):
+            self.line_number = number_of_line
+            check = self.clean_line(line)
+            if check == "":
+                continue
             if self.nb_drones is None:
-                raise ParseError("no nb_drones line found")  
-            return self.graph, self.nb_drones
-            
+                self.nb_drones = self.parse_drones_line(check)
+                continue
+            if check.startswith("connection:"):
+                name_a, name_b, capacity = (
+                    self.parse_connection_line(check))
+                if name_a not in self.graph.zones:
+                    raise ParseError(f"line {self.line_number}:"
+                                     f" unknown zone {name_a}")
+                if name_b not in self.graph.zones:
+                    raise ParseError(f"line {self.line_number}:"
+                                     f" unknown zone {name_b}")
+                zone_a = self.graph.zones[name_a]
+                zone_b = self.graph.zones[name_b]
+                try:
+                    self.graph.add_connection(zone_a, zone_b, capacity)
+                except ParseError as e:
+                    raise ParseError(f"line {self.line_number}: {e}") from e
+            elif check.startswith(("hub:", "start_hub:", "end_hub:")):
+                zone, kind = self.parse_zone_line(check)
+                try:
+                    self.graph.add_zone(zone, kind)
+                except ParseError as e:
+                    raise ParseError(f"line {self.line_number}: {e}") from e
+            else:
+                raise ParseError(f"line {self.line_number}: unknown line type")
+        self.graph.start_validate()
+        self.graph.end_validate()
+        if self.nb_drones is None:
+            raise ParseError("no nb_drones line found")
+        return self.graph, self.nb_drones
+
     def parse_metadata(self, raw: str | None) -> dict[str, str]:
 
-        raw = raw or "" # because raw can be none idan findall radi dkraxi
+        raw = raw or ""   # because raw can be none idan findall radi dkraxi
         if raw and meta_block.fullmatch(raw) is None:
-            raise ParseError(f"line {self.line_number}: invalid metadata block")
+            raise ParseError(f"line {self.line_number}:"
+                             f" invalid metadata block")
         pairs = meta_pair.findall(raw)
         dic: dict[str, str] = {}
         for key, value in pairs:
@@ -109,22 +114,25 @@ class Parser:
         unknown = set(dic) - allowed_metadata
 
         if unknown:
-            raise ParseError(f"line {self.line_number}:metadata not recognized: {unknown}")
-
+            raise ParseError(f"line {self.line_number}:"
+                             f"metadata not recognized: {unknown}")
 
         try:
             zone_type = ZoneType(dic.get("zone", "normal"))
         except ValueError as e:
-            raise ParseError(f"line {self.line_number}:invalid zone type") from e
+            raise ParseError(f"line {self.line_number}:"
+                             f"invalid zone type") from e
 
         try:
             max_drones = int(dic.get("max_drones", "1"))
         except ValueError as e:
-            raise ParseError(f"line {self.line_number}:max_drones must be a number") from e
+            raise ParseError(f"line {self.line_number}:"
+                             f"max_drones must be a number") from e
         if max_drones < 1:
-            raise ParseError (f"line {self.line_number}:the minimum possible number of drones is 1")
+            raise ParseError(f"line {self.line_number}:"
+                             f"the minimum possible number of drones is 1")
 
-        color = dic.get("color") 
+        color = dic.get("color")
         name = data.group(2)
         x = int(data.group("x"))
         y = int(data.group("y"))
@@ -140,10 +148,12 @@ class Parser:
 
         names = result.group(1).split("-")
         if len(names) != 2:
-            raise ParseError(f"{self.line_number}: a connection has to be between just two zones")
+            raise ParseError(f"{self.line_number}:"
+                             f" a connection has to be between just two zones")
 
         if "" in names:
-            raise ParseError(f"line {self.line_number}: a connection need to have a name")
+            raise ParseError(f"line {self.line_number}:"
+                             f" a connection need to have a name")
 
         dic = self.parse_metadata(result.group("meta"))
         allowed = {"max_link_capacity"}
@@ -153,9 +163,11 @@ class Parser:
         try:
             capacity = int(dic.get("max_link_capacity", "1"))
         except ValueError as e:
-            raise ParseError(f"line {self.line_number}: max link capacity should be an int") from e
+            raise ParseError(f"line {self.line_number}:"
+                             f" max link capacity should be an int") from e
         if capacity < 1:
-            raise ParseError(f"line {self.line_number}: the capacity should be a positif number")
+            raise ParseError(f"line {self.line_number}:"
+                             f" the capacity should be a positif number")
 
         return names[0], names[1], capacity
 
@@ -166,4 +178,3 @@ if __name__ == "__main__":
         graph, nb = p.parse()
     except ParseError as e:
         print(f"Error: {e}")
-        
