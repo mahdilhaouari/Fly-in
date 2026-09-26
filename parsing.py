@@ -1,3 +1,4 @@
+from __future__ import annotations
 from data_model import Zone, Graph, ZoneType, HubKind, ParseError
 import re
 

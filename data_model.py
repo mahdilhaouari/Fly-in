@@ -10,6 +10,9 @@ class NoPathError(Exception):
     pass
 
 
+class SimulationError(Exception):
+    pass
+
 class ZoneType(Enum):
     NORMAL = "normal"
     BLOCKED = "blocked"
@@ -47,6 +50,13 @@ class Zone:
     def is_enterable(self) -> bool:
         return True if self.zone_type is not ZoneType.BLOCKED else False # or we can usee return self.zone_type is not ZoneType.BLOCKED without if else
 
+    def connection_to(self, other: Zone) -> Connection:
+        for conn in self.connections:
+            if conn.other_side(self) is other:
+                return conn
+        raise ValueError(
+            f"no connection between {self.name} and {other.name}"
+        )
 
 class Connection:
     def __init__(self, zone_a: Zone, zone_b: Zone,
@@ -116,11 +126,16 @@ class Graph:
 class Drone:
     def __init__(self, drone_id: int, start: Zone) -> None:
         self.id = drone_id
-        self.zone: Zone | None = start
+        self.zone: Zone = start
         self.transit: Connection | None = None
-        self.turns_left = 0
         self.path: list[Zone] = []
         self.step = 0
+
+    @property
+    def occupying(self) -> Zone:
+        if self.transit is not None:
+            return self.path[self.step + 1]
+        return self.zone
 
 
 class Movement:

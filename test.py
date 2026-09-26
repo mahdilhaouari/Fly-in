@@ -49,10 +49,18 @@
 
 
 
-import heapq
-b = "frf"
-a = [[2, 4, 5, 6],[7],[3]]
-z = heapq.heappop(a)
-print(hash(b))
-print(a)
+# import heapq
+# counter = 1
+# heap = [(0, 2),counter]
+# while heap:
+#     a, b = heapq.heappop(heap)
+#     print(type(a))
 
+
+# import numpy
+
+# numpy.arc
+
+
+a = ""
+print(any(a))
