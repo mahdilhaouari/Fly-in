@@ -14,11 +14,7 @@ def main() -> None:
         graph, nb_drones = Parser(path).parse()
         turns = Planner(graph, nb_drones).plan()
 
-        if graph.start is None or graph.end is None:
-            raise NoPathError("the map has no start or end")
-
-        route = Pathfinder(graph).dijkstra(graph.start, graph.end)
-        turns = Scheduler(graph, nb_drones, route).run()
+        
 
     except (ParseError, NoPathError, SimulationError) as e:
         print(f"Error: {e}")

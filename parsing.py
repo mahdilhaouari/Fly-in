@@ -1,181 +1,148 @@
 from __future__ import annotations
-from data_model import Zone, Graph, ZoneType, HubKind, ParseError
-import re
-
-zone_line = re.compile(
-    r"(start_hub|end_hub|hub): ([^\s-]+) "
-    r"(?P<x>-?\d+) (?P<y>-?\d+)(\s*\[(?P<meta>.*)\])?"
-)
-
-connection_line = re.compile(
-    r"connection: ([^\s]+)(\s*\[(?P<meta>.*)\])?"
-)
-
-drones_line = re.compile(r"nb_drones:\s+(-?\d+)")
-
-meta_pair = re.compile(r"(\w+)=(\S+)")
-
-meta_block = re.compile(r"(\w+)=([^\s=]+)(\s+(\w+)=([^\s=]+))*")
+from enum import Enum
 
 
-class Parser:
-    def __init__(self, path: str) -> None:
-        self.path = path
-        self.graph = Graph()
-        self.nb_drones: int | None = None
-        self.line_number = 0
-
-    def clean_line(self, line: str) -> str:
-        return line.split("#")[0].strip()
-
-    def parse_drones_line(self, line: str) -> int:
-        result = drones_line.fullmatch(line)
-        if result is None:
-            raise ParseError(
-                f"line {self.line_number}: invalid nb_drones line"
-            )
-        try:
-            nbr = int(result.group(1))
-        except ValueError as e:
-            raise ParseError(
-                f"line {self.line_number}: nb_drones must be a number"
-            ) from e
-        if nbr < 1:
-            raise ParseError(
-                f"line {self.line_number}: we must have at least 1 drone"
-            )
-        return nbr
-
-    def parse(self) -> tuple[Graph, int]:
-        try:
-            with open(self.path) as f:
-                lines = f.readlines()
-        except FileNotFoundError as e:
-            raise ParseError("this file doesnt exist") from e
-
-        for number_of_line, line in enumerate(lines, start=1):
-            self.line_number = number_of_line
-            check = self.clean_line(line)
-            if check == "":
-                continue
-            if self.nb_drones is None:
-                self.nb_drones = self.parse_drones_line(check)
-                continue
-            if check.startswith("connection:"):
-                name_a, name_b, capacity = (
-                    self.parse_connection_line(check))
-                if name_a not in self.graph.zones:
-                    raise ParseError(f"line {self.line_number}:"
-                                     f" unknown zone {name_a}")
-                if name_b not in self.graph.zones:
-                    raise ParseError(f"line {self.line_number}:"
-                                     f" unknown zone {name_b}")
-                zone_a = self.graph.zones[name_a]
-                zone_b = self.graph.zones[name_b]
-                try:
-                    self.graph.add_connection(zone_a, zone_b, capacity)
-                except ParseError as e:
-                    raise ParseError(f"line {self.line_number}: {e}") from e
-            elif check.startswith(("hub:", "start_hub:", "end_hub:")):
-                zone, kind = self.parse_zone_line(check)
-                try:
-                    self.graph.add_zone(zone, kind)
-                except ParseError as e:
-                    raise ParseError(f"line {self.line_number}: {e}") from e
-            else:
-                raise ParseError(f"line {self.line_number}: unknown line type")
-        self.graph.start_validate()
-        self.graph.end_validate()
-        if self.nb_drones is None:
-            raise ParseError("no nb_drones line found")
-        return self.graph, self.nb_drones
-
-    def parse_metadata(self, raw: str | None) -> dict[str, str]:
-
-        raw = raw or ""   # because raw can be none idan findall radi dkraxi
-        if raw and meta_block.fullmatch(raw) is None:
-            raise ParseError(f"line {self.line_number}:"
-                             f" invalid metadata block")
-        pairs = meta_pair.findall(raw)
-        dic: dict[str, str] = {}
-        for key, value in pairs:
-            dic[key] = value
-        return dic
-
-    def parse_zone_line(self, line: str) -> tuple[Zone, HubKind]:
-        data = zone_line.fullmatch(line)
-        if data is None:
-            raise ParseError(f"line {self.line_number}: bad line syntax")
-
-        dic = self.parse_metadata(data.group("meta"))
-
-        allowed_metadata = {"zone", "max_drones", "color"}
-
-        # Unknown metadata
-        unknown = set(dic) - allowed_metadata
-
-        if unknown:
-            raise ParseError(f"line {self.line_number}:"
-                             f"metadata not recognized: {unknown}")
-
-        try:
-            zone_type = ZoneType(dic.get("zone", "normal"))
-        except ValueError as e:
-            raise ParseError(f"line {self.line_number}:"
-                             f"invalid zone type") from e
-
-        try:
-            max_drones = int(dic.get("max_drones", "1"))
-        except ValueError as e:
-            raise ParseError(f"line {self.line_number}:"
-                             f"max_drones must be a number") from e
-        if max_drones < 1:
-            raise ParseError(f"line {self.line_number}:"
-                             f"the minimum possible number of drones is 1")
-
-        color = dic.get("color")
-        name = data.group(2)
-        x = int(data.group("x"))
-        y = int(data.group("y"))
-        kind = HubKind(data.group(1))
-        zone = Zone(name, color, max_drones, zone_type, x, y)
-        return zone, kind
-
-    def parse_connection_line(self, line: str) -> tuple[str, str, int]:
-        result = connection_line.fullmatch(line)
-
-        if result is None:
-            raise ParseError(f"line {self.line_number}: bad connection line")
-
-        names = result.group(1).split("-")
-        if len(names) != 2:
-            raise ParseError(f"{self.line_number}:"
-                             f" a connection has to be between just two zones")
-
-        if "" in names:
-            raise ParseError(f"line {self.line_number}:"
-                             f" a connection need to have a name")
-
-        dic = self.parse_metadata(result.group("meta"))
-        allowed = {"max_link_capacity"}
-        unknown = set(dic) - allowed
-        if unknown:
-            raise ParseError(f"line {self.line_number}: metadata not allowed")
-        try:
-            capacity = int(dic.get("max_link_capacity", "1"))
-        except ValueError as e:
-            raise ParseError(f"line {self.line_number}:"
-                             f" max link capacity should be an int") from e
-        if capacity < 1:
-            raise ParseError(f"line {self.line_number}:"
-                             f" the capacity should be a positif number")
-
-        return names[0], names[1], capacity
+class ParseError(Exception):
+    """The map file is written wrong."""
 
 
-if __name__ == "__main__":
-    try:
-        p = Parser("file.txt")
-        graph, nb = p.parse()
-    except ParseError as e:
-        print(f"Error: {e}")
+class NoPathError(Exception):
+    """The map is written right, but the end cannot be reached."""
+
+
+class SimulationError(Exception):
+    """The planner could not finish the simulation."""
+
+
+class ZoneType(Enum):
+    NORMAL = "normal"
+    BLOCKED = "blocked"
+    RESTRICTED = "restricted"
+    PRIORITY = "priority"
+
+
+class HubKind(Enum):
+    START = "start_hub"
+    END = "end_hub"
+    NORMAL = "hub"
+
+
+class Zone:
+    """One place on the map."""
+
+    def __init__(self, name: str, color: str | None, max_drones: int,
+                 zone_type: ZoneType, x: int, y: int) -> None:
+        self.name = name
+        self.color = color
+        self.max_drones = max_drones
+        self.zone_type = zone_type
+        self.x = x
+        self.y = y
+        self.connections: list[Connection] = []
+
+    @property
+    def cost(self) -> int:
+        """How many turns it takes to enter this zone."""
+        if self.zone_type in (ZoneType.NORMAL, ZoneType.PRIORITY):
+            return 1
+        elif self.zone_type == ZoneType.RESTRICTED:
+            return 2
+        raise ValueError(f"blocked zone {self.name} has no cost")
+
+    @property
+    def is_enterable(self) -> bool:
+        return self.zone_type is not ZoneType.BLOCKED
+
+    def connection_to(self, other: Zone) -> Connection:
+        for conn in self.connections:
+            if conn.other_side(self) is other:
+                return conn
+        raise ValueError(
+            f"no connection between {self.name} and {other.name}"
+        )
+
+
+class Connection:
+    """A two-way link between two zones."""
+
+    def __init__(self, zone_a: Zone, zone_b: Zone,
+                 max_link_capacity: int) -> None:
+        self.max_link_capacity = max_link_capacity
+        self.zone_a = zone_a
+        self.zone_b = zone_b
+
+    @property
+    def name(self) -> str:
+        return f"{self.zone_a.name}-{self.zone_b.name}"
+
+    def other_side(self, zone: Zone) -> Zone:
+        return self.zone_b if zone is self.zone_a else self.zone_a
+
+
+class Graph:
+    """The whole map: every zone, every connection, the start and the end."""
+
+    def __init__(self) -> None:
+        self.zones: dict[str, Zone] = {}
+        self.connections: list[Connection] = []
+        self.start: Zone | None = None
+        self.end: Zone | None = None
+
+    def has_connection(self, first_zone: Zone, second_zone: Zone) -> bool:
+        for con in self.connections:
+            if (
+                con.zone_a is first_zone and con.zone_b is second_zone
+            ) or (
+                con.zone_b is first_zone and con.zone_a is second_zone
+            ):
+                return True
+        return False
+
+    def add_connection(self, first_zone: Zone,
+                       second_zone: Zone, capacity: int) -> None:
+        if self.has_connection(first_zone, second_zone):
+            raise ParseError(f"{first_zone.name} and {second_zone.name} "
+                             "are already connected")
+        conn = Connection(first_zone, second_zone, capacity)
+        first_zone.connections.append(conn)
+        second_zone.connections.append(conn)
+        self.connections.append(conn)
+
+    def add_zone(self, zone: Zone, kind: HubKind) -> None:
+        # First check everything, then change the graph.
+        if zone.name in self.zones:
+            raise ParseError(f"zone {zone.name} already exists")
+        if kind == HubKind.START and self.start is not None:
+            raise ParseError("there are two start hubs")
+        if kind == HubKind.END and self.end is not None:
+            raise ParseError("there are two end hubs")
+
+        self.zones[zone.name] = zone
+        if kind == HubKind.START:
+            self.start = zone
+        elif kind == HubKind.END:
+            self.end = zone
+
+    def start_validate(self) -> None:
+        if self.start is None:
+            raise ParseError("no start hub found")
+
+    def end_validate(self) -> None:
+        if self.end is None:
+            raise ParseError("no end hub found")
+
+
+class Drone:
+    """One drone. Its route is planned by the Planner, not stored here."""
+
+    def __init__(self, drone_id: int, start: Zone) -> None:
+        self.id = drone_id
+        self.start = start
+
+
+class Movement:
+    """One line part of the output: drone `drone` goes to `target`."""
+
+    def __init__(self, drone: Drone, target: Zone | Connection) -> None:
+        self.drone = drone
+        self.target = target

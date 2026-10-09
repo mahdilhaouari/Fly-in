@@ -62,5 +62,8 @@
 # numpy.arc
 
 
-a = ""
-print(any(a))
+for x, y in  list(zip([1, 3, 4], [1, 3, 2])):
+    print(f"we have {x} andd {y}")
+from scheduler import mahdi_name
+
+print(mahdi_name)

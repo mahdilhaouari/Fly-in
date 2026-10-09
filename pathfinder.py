@@ -1,76 +1,35 @@
 from __future__ import annotations
-from data_model import Graph, Zone, ZoneType, NoPathError
+
 import heapq
+
+from data_model import Graph, Zone
 
 
 class Pathfinder:
+    """Distances on the map, ignoring time and other drones."""
+
     def __init__(self, graph: Graph) -> None:
         self.graph = graph
 
-    def dijkstra(self, start: Zone, end: Zone, penalty: dict[Zone, int] | None = None) -> list[Zone]:
-        best_cost: dict[Zone, tuple[int, int]] = {start: (0, 0)}
-        parent: dict[Zone, Zone] = {}
+    def distances_to(self, end: Zone) -> dict[Zone, int]:
+        """Cheapest cost from every zone to `end` (Dijkstra, backwards).
+
+        Zones missing from the result cannot reach `end` at all.
+        """
+        dist = {end: 0}
         counter = 0
-        heap = [((0, 0), counter, start)]
-        penalty = penalty or {}
+        heap = [(0, counter, end)]
         while heap:
             cost, _, zone = heapq.heappop(heap)
-            if cost > best_cost[zone]:
-                continue
-            if zone is end:
-                break
+            if cost > dist[zone]:
+                continue                       # an old, worse copy
+            if not zone.is_enterable:
+                continue                       # nobody can pass through it
             for conn in zone.connections:
-                neighbour = conn.other_side(zone)
-                if not neighbour.is_enterable:
-                    continue
-                new_total = cost[0] + neighbour.cost + penalty.get(neighbour, 0)
-                new_priority = cost[1]
-                if neighbour.zone_type == ZoneType.PRIORITY:
-                    new_priority -= 1
-                new_cost = (new_total, new_priority)
-                if (neighbour not in best_cost or
-                        new_cost < best_cost[neighbour]):
-                    best_cost[neighbour] = new_cost
-                    parent[neighbour] = zone
+                before = conn.other_side(zone)
+                new_cost = cost + zone.cost    # the cost of entering `zone`
+                if before not in dist or new_cost < dist[before]:
+                    dist[before] = new_cost
                     counter += 1
-                    heapq.heappush(heap, (new_cost, counter, neighbour))
-
-        if end not in best_cost:
-            raise NoPathError("no path from start to end")
-
-        path = [end]
-        zone = end
-        while zone is not start:
-            zone = parent[zone]
-            path.append(zone)
-
-        return path[::-1]
-    
-    def find_paths(self, start: Zone, end: Zone,
-               limit: int) -> list[list[Zone]]:
-        paths: list[list[Zone]] = []
-        penalty: dict[Zone, int] = {}
-        for _ in range(limit):
-            path = self.dijkstra(start, end, penalty)
-            if path in paths:
-                break
-            paths.append(path)
-            for zone in path[1:-1]:
-                penalty[zone] = penalty.get(zone, 0) + 1
-        return paths
-
-
-if __name__ == "__main__":
-    from parsing import Parser
-
-    p = Parser("maps/hard/01_maze_nightmare.txt")
-    graph, nb = p.parse()
-
-    pf = Pathfinder(graph)
-    if graph.start is None or graph.end is None:
-        raise NoPathError("graph has no start or end")
-
-    path = pf.dijkstra(graph.start, graph.end)
-    path = pf.dijkstra(graph.start, graph.end)
-    for zone in path:
-        print(zone.name)
+                    heapq.heappush(heap, (new_cost, counter, before))
+        return dist
