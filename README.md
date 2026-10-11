@@ -62,7 +62,6 @@ All the Makefile rules:
 | `make debug` | runs the program inside Python's debugger (`pdb`) |
 | `make clean` | deletes `__pycache__` and `.mypy_cache` |
 | `make lint` | runs `flake8` and `mypy` with the flags of the subject |
-| `make lint-strict` | runs `flake8` and `mypy --strict` |
 
 **Errors:** a bad map file, a missing file or a map with no route prints
 one line starting with `Error:` (with the line number for file errors) and

@@ -4,8 +4,6 @@ import re
 
 from data_model import Zone, Graph, ZoneType, HubKind, ParseError
 
-# One pattern per kind of line. We always use fullmatch(), so the WHOLE
-# line must fit the pattern, not only its beginning.
 ZONE_LINE = re.compile(
     r"(?P<kind>start_hub|end_hub|hub):\s+(?P<name>[^\s-]+)"
     r"\s+(?P<x>-?\d+)\s+(?P<y>-?\d+)(\s*\[(?P<meta>.*)\])?"
@@ -14,7 +12,6 @@ CONNECTION_LINE = re.compile(
     r"connection:\s+(?P<names>\S+)(\s*\[(?P<meta>.*)\])?"
 )
 DRONES_LINE = re.compile(r"nb_drones:\s+(?P<count>\S+)")
-# What is inside [ ]: one or more key=value, separated by spaces.
 META_BLOCK = re.compile(r"\w+=[^\s=\]]+(\s+\w+=[^\s=\]]+)*")
 
 ZONE_META = {"zone", "color", "max_drones"}
@@ -45,7 +42,6 @@ class Parser:
             try:
                 self.parse_line(text)
             except ParseError as e:
-                # The only place that adds the line number.
                 raise ParseError(f"line {number}: {e}") from e
 
         if self.nb_drones is None:
@@ -86,12 +82,16 @@ class Parser:
             zone_type = ZoneType(meta.get("zone", "normal"))
         except ValueError as e:
             raise ParseError(f"unknown zone type {meta['zone']}") from e
-        max_drones = self.positive_int(meta.get("max_drones", "1"),
-                                       "max_drones")
+        kind = HubKind(match.group("kind"))
+        if kind == HubKind.NORMAL:
+            max_drones = self.positive_int(meta.get("max_drones", "1"),
+                                           "max_drones")
+        else:
+            max_drones = 1
 
         zone = Zone(match.group("name"), meta.get("color"), max_drones,
                     zone_type, int(match.group("x")), int(match.group("y")))
-        self.graph.add_zone(zone, HubKind(match.group("kind")))
+        self.graph.add_zone(zone, kind)
 
     def parse_connection_line(self, text: str) -> None:
         match = CONNECTION_LINE.fullmatch(text)
@@ -115,7 +115,7 @@ class Parser:
     def parse_metadata(self, raw: str | None,
                        allowed: set[str]) -> dict[str, str]:
         """Turn 'zone=restricted max_drones=2' into a dict."""
-        if raw is None:                       # the line has no [ ]
+        if raw is None:
             return {}
         raw = raw.strip()
         if META_BLOCK.fullmatch(raw) is None:

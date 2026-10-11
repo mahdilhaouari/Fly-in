@@ -1,4 +1,4 @@
-from data_model import Zone, ZoneType, Drone, Movement, Connection
+from data_model import Movement
 
 
 class Renderer:

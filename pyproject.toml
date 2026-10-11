@@ -1,16 +1,15 @@
 [project]
 name = "fly-in"
 version = "0.1.0"
-description = "Add your description here"
+description = "Routes a fleet of drones through a map of zones in as few turns as possible."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "flake8>=7.3.0",
-    "mypy>=2.3.1",
     "pygame>=2.6.1",
 ]
 
 [dependency-groups]
 dev = [
     "flake8>=7.3.0",
+    "mypy>=2.3.1",
 ]

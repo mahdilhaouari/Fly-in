@@ -3,15 +3,16 @@ from enum import Enum
 
 
 class ParseError(Exception):
-    pass
+    """The map file is written wrong."""
 
 
 class NoPathError(Exception):
-    pass
+    """The map is written right, but the end cannot be reached."""
 
 
 class SimulationError(Exception):
-    pass
+    """The planner could not finish the simulation."""
+
 
 class ZoneType(Enum):
     NORMAL = "normal"
@@ -27,6 +28,8 @@ class HubKind(Enum):
 
 
 class Zone:
+    """One place on the map."""
+
     def __init__(self, name: str, color: str | None, max_drones: int,
                  zone_type: ZoneType, x: int, y: int) -> None:
         self.name = name
@@ -39,16 +42,16 @@ class Zone:
 
     @property
     def cost(self) -> int:
-        if self.zone_type == ZoneType.NORMAL or self.zone_type == ZoneType.PRIORITY:
+        """How many turns it takes to enter this zone."""
+        if self.zone_type in (ZoneType.NORMAL, ZoneType.PRIORITY):
             return 1
         elif self.zone_type == ZoneType.RESTRICTED:
             return 2
-        else:
-            raise ValueError(f"blocked zone {self.name} has no cost")       
+        raise ValueError(f"blocked zone {self.name} has no cost")
 
     @property
     def is_enterable(self) -> bool:
-        return True if self.zone_type is not ZoneType.BLOCKED else False # or we can usee return self.zone_type is not ZoneType.BLOCKED without if else
+        return self.zone_type is not ZoneType.BLOCKED
 
     def connection_to(self, other: Zone) -> Connection:
         for conn in self.connections:
@@ -58,7 +61,10 @@ class Zone:
             f"no connection between {self.name} and {other.name}"
         )
 
+
 class Connection:
+    """A two-way link between two zones."""
+
     def __init__(self, zone_a: Zone, zone_b: Zone,
                  max_link_capacity: int) -> None:
         self.max_link_capacity = max_link_capacity
@@ -68,12 +74,14 @@ class Connection:
     @property
     def name(self) -> str:
         return f"{self.zone_a.name}-{self.zone_b.name}"
-    
+
     def other_side(self, zone: Zone) -> Zone:
         return self.zone_b if zone is self.zone_a else self.zone_a
 
 
 class Graph:
+    """The whole map: every zone, every connection, the start and the end."""
+
     def __init__(self) -> None:
         self.zones: dict[str, Zone] = {}
         self.connections: list[Connection] = []
@@ -83,7 +91,7 @@ class Graph:
     def has_connection(self, first_zone: Zone, second_zone: Zone) -> bool:
         for con in self.connections:
             if (
-                con.zone_a is first_zone and con.zone_b is second_zone 
+                con.zone_a is first_zone and con.zone_b is second_zone
             ) or (
                 con.zone_b is first_zone and con.zone_a is second_zone
             ):
@@ -93,7 +101,8 @@ class Graph:
     def add_connection(self, first_zone: Zone,
                        second_zone: Zone, capacity: int) -> None:
         if self.has_connection(first_zone, second_zone):
-            raise ParseError("the 2 zones already connected")
+            raise ParseError(f"{first_zone.name} and {second_zone.name} "
+                             "are already connected")
         conn = Connection(first_zone, second_zone, capacity)
         first_zone.connections.append(conn)
         second_zone.connections.append(conn)
@@ -101,17 +110,21 @@ class Graph:
 
     def add_zone(self, zone: Zone, kind: HubKind) -> None:
         if zone.name in self.zones:
-            raise ParseError("this zone already exist")
+            raise ParseError(f"zone {zone.name} already exists")
+        if kind == HubKind.START and self.start is not None:
+            raise ParseError("there are two start hubs")
+        if kind == HubKind.END and self.end is not None:
+            raise ParseError("there are two end hubs")
+        for other in self.zones.values():
+            if (other.x, other.y) == (zone.x, zone.y):
+                raise ParseError(f"zones {other.name} and {zone.name} "
+                                 f"have the same coordinates ({zone.x}, "
+                                 f"{zone.y})")
+
         self.zones[zone.name] = zone
-
         if kind == HubKind.START:
-            if self.start is not None:
-                raise ParseError("there is two start hubs")
             self.start = zone
-
-        if kind == HubKind.END:
-            if self.end is not None:
-                raise ParseError("there is two end hubs")
+        elif kind == HubKind.END:
             self.end = zone
 
     def start_validate(self) -> None:
@@ -124,22 +137,16 @@ class Graph:
 
 
 class Drone:
+    """One drone. Its route is planned by the Planner, not stored here."""
+
     def __init__(self, drone_id: int, start: Zone) -> None:
         self.id = drone_id
-        self.zone: Zone = start
-        self.transit: Connection | None = None
-        self.path: list[Zone] = []
-        self.step = 0
-
-    @property
-    def occupying(self) -> Zone:
-        if self.transit is not None:
-            return self.path[self.step + 1]
-        return self.zone
+        self.start = start
 
 
 class Movement:
+    """One line part of the output: drone `drone` goes to `target`."""
+
     def __init__(self, drone: Drone, target: Zone | Connection) -> None:
         self.drone = drone
         self.target = target
-

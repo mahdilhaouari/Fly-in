@@ -14,7 +14,7 @@ class Scheduler:
             raise NoPathError("the map has no start or end")
         self.start: Zone = graph.start
         self.end: Zone = graph.end
-        
+
         self.zone_use: Counter[tuple[Zone, int]] = Counter()
         self.link_use: Counter[tuple[Connection, int]] = Counter()
         self.last_turn = 0

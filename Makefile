@@ -1,28 +1,26 @@
 PYTHON = uv run python
 MAP ?= maps/challenger/01_the_impossible_dream.txt
 
+SKIP = .venv,__pycache__,.mypy_cache,.git
+
 .PHONY: install run visual debug clean lint lint-strict
 
 install:
-	uv sync
+	@uv sync
 
 run:
-	$(PYTHON) main.py $(MAP)
+	@$(PYTHON) main.py $(MAP)
 
 visual:
-	$(PYTHON) main.py $(MAP) --visual
+	@$(PYTHON) main.py $(MAP) --visual
 
 debug:
-	$(PYTHON) -m pdb main.py $(MAP)
+	@$(PYTHON) -m pdb main.py $(MAP)
 
 clean:
-	rm -rf __pycache__ .mypy_cache
+	@rm -rf __pycache__ .mypy_cache
 
 lint:
-	uv run flake8 .
-	uv run mypy . --warn-return-any --warn-unused-ignores \
+	@uv run flake8 . --exclude $(SKIP)
+	@uv run mypy . --exclude .venv --warn-return-any --warn-unused-ignores \
 		--ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
-
-lint-strict:
-	uv run flake8 .
-	uv run mypy . --strict

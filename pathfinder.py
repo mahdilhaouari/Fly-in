@@ -22,12 +22,12 @@ class Pathfinder:
         while heap:
             cost, _, zone = heapq.heappop(heap)
             if cost > dist[zone]:
-                continue                       # an old, worse copy
+                continue
             if not zone.is_enterable:
-                continue                       # nobody can pass through it
+                continue
             for conn in zone.connections:
                 before = conn.other_side(zone)
-                new_cost = cost + zone.cost    # the cost of entering `zone`
+                new_cost = cost + zone.cost
                 if before not in dist or new_cost < dist[before]:
                     dist[before] = new_cost
                     counter += 1
