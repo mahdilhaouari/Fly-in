@@ -62,8 +62,22 @@
 # numpy.arc
 
 
-for x, y in  list(zip([1, 3, 4], [1, 3, 2])):
-    print(f"we have {x} andd {y}")
-from scheduler import mahdi_name
+# for x, y in  list(zip([1, 3, 4], [1, 3, 2])):
+#     print(f"we have {x} andd {y}")
+# from scheduler import mahdi_name
 
-print(mahdi_name)
+# print(mahdi_name)
+
+
+
+
+
+# movements = ["1", "2", "3"]
+# x = "...".join(f"ff{m}ff" for m in movements)
+# print(x)
+
+
+
+
+# import sys
+# print(len(sys.argv))

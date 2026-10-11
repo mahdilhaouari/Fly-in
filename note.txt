@@ -24,3 +24,6 @@ For this project I'd keep it on the drone — simpler, and re-planning mid-run i
 
 
 #### print(int("34343_____2")) if this string was it the numberr of drones before casting it well give a number but it should be a error
+
+
+#### in the scheduler what does and how does counter works
